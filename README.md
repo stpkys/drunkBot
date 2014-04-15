@@ -1,4 +1,4 @@
 drunkBot
 ========
 
-another stupid scalabot 
+another stupid scalatron bot
