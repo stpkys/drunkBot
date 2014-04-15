@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" build-on-make="true" name="ScalatronBot:jar">
+    <output-path>$PROJECT_DIR$/../Scalatron/bots/drunkBot/</output-path>
+    <root id="archive" name="ScalatronBot.jar">
+      <element id="module-output" name="drunkbot" />
+    </root>
+  </artifact>
+</component>
