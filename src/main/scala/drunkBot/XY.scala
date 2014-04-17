@@ -89,6 +89,7 @@ case class XY(x: Int, y: Int) {
 object XY {
   /** Parse an XY value from XY.toString format, e.g. "2:3". */
   def apply(s: String) : XY = { val a = s.split(':'); XY(a(0).toInt,a(1).toInt) }
+  def apply(array: Array[Int]): XY = XY(array(0), array(1))
 
   val Zero = XY(0, 0)
   val One = XY(1, 1)
@@ -119,26 +120,9 @@ object XY {
     case Direction90.Left => Left
     case Direction90.Down => Down
   }
-
-  def apply(array: Array[Int]): XY = XY(array(0), array(1))
 }
 
 
-object Direction45 {
-  val Right = 0
-  val RightUp = 1
-  val Up = 2
-  val UpLeft = 3
-  val Left = 4
-  val LeftDown = 5
-  val Down = 6
-  val DownRight = 7
-}
 
 
-object Direction90 {
-  val Right = 0
-  val Up = 1
-  val Left = 2
-  val Down = 3
-}
+

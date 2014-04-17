@@ -13,12 +13,9 @@ class ControlFunctionFactory {
           ControlFunction.forSlave(bot)
         }
         bot.toString
+      case "Welcome" => "Set(a=b)"
+      case "Goodbye" => ""
       case _ => "" // OK
     }
   }
 }
-
-
-
-
-
