@@ -10,6 +10,7 @@ case class BotImpl(inputParams: Map[String, String]) extends MiniBot {
   val energy = inputParams("energy").toInt
   val time = inputParams("time").toInt
   val generation = inputParams("generation").toInt
+  val lastBotTime = inputAsIntOrElse("lastBotTime", 0)
   def offsetToMaster = inputAsXYOrElse("master", XY.Zero)
 
 

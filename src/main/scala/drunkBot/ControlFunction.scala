@@ -1,5 +1,7 @@
 package drunkBot
 
+import java.util.Random
+
 /** This bot builds a 'direction value map' that assigns an attractiveness score to
   * each of the eight available 45-degree directions. Additional behaviors:
   * - aggressive missiles: approach an enemy master, then explode
@@ -15,7 +17,8 @@ package drunkBot
   */
 object ControlFunction
 {
-  def forMaster(bot: Bot) {
+  def rnd = new Random()
+  def forMaster(bot: BotImpl) {
     // demo: log the view of the master bot into the debug output (if running in the browser sandbox)
     // bot.log(bot.view.cells.grouped(31).mkString("\n"))
 
@@ -32,108 +35,68 @@ object ControlFunction
     bot.move(direction)
     bot.set("lastDirection" -> bestDirection45)
 
-    if(dontFireAggressiveMissileUntil < bot.time && bot.energy > 100) { // fire attack missile?
-      nearestEnemyMaster match {
-        case None =>            // no-on nearby
-        case Some(relPos) =>    // a master is nearby
-          val unitDelta = relPos.signum
-          val remainder = relPos - unitDelta // we place slave nearer target, so subtract that from overall delta
-          bot.spawn(unitDelta, "mood" -> "Aggressive", "target" -> remainder)
-          bot.set("dontFireAggressiveMissileUntil" -> (bot.time + relPos.stepCount + 1))
-      }
-    }
-    else
-    if(dontFireDefensiveMissileUntil < bot.time && bot.energy > 100) { // fire defensive missile?
-      nearestEnemySlave match {
-        case None =>            // no-on nearby
-        case Some(relPos) =>    // an enemy slave is nearby
-          if(relPos.stepCount < 8) {
-            // this one's getting too close!
-            val unitDelta = relPos.signum
-            val remainder = relPos - unitDelta // we place slave nearer target, so subtract that from overall delta
-            bot.spawn(unitDelta, "mood" -> "Defensive", "target" -> remainder)
-            bot.set("dontFireDefensiveMissileUntil" -> (bot.time + relPos.stepCount + 1))
-          }
+    if(bot.view.spawnBot && bot.energy > 500 && scala.math.abs(bot.lastBotTime - bot.time) > 4){
+      val direction = bot.view.emptyDirection
+      direction match {
+        case None =>
+          bot.say("Let's PARTY!!!")
+        case Some(pos) =>
+          bot.spawn(pos, "mood" -> "harvest")
+          bot.set("lastBotTime" -> bot.time)
       }
     }
   }
 
 
-  def forSlave(bot: MiniBot) {
-    bot.inputOrElse("mood", "Lurking") match {
-      case "Aggressive" => reactAsAggressiveMissile(bot)
-      case "Defensive" => reactAsDefensiveMissile(bot)
-      case s: String => bot.log("unknown mood: " + s)
+  def forSlave(bot: BotImpl) {
+    if(reactAsAggressive(bot, 'm') || reactAsAggressive(bot, 's')){
+      return
     }
+    reactAsHarvest(bot)
   }
 
 
-  def reactAsAggressiveMissile(bot: MiniBot) {
-    bot.view.offsetToNearest('m') match {
+  def reactAsHarvest(bot: BotImpl) {
+      val offsets = List(bot.view.offsetToNearest('P'), bot.view.offsetToNearest('B'))
+      val part = offsets.filter(!_.isEmpty).map(_.get)
+      val offsetToMaster = bot.offsetToMaster
+      val offset = if(part.size == 0) offsetToMaster else part(0)
+
+      bot.move(offset.signum)
+      bot.set("rx" -> offset.x, "ry" -> offset.y)
+
+      if(bot.view.spawnBot && bot.energy > 400 && math.abs(bot.time - bot.lastBotTime) > 4) {
+        val emptyCell = bot.view.emptyDirection
+        emptyCell match {
+          case Some(pos) =>
+            bot.spawn(pos, "mood" -> "harvest")
+            bot.set("lastBotTime" -> bot.time)
+          case None =>
+            bot.say("Let's PARTY!!!")
+        }
+      }
+  }
+
+  def reactAsAggressive(bot: MiniBot, t: Char): Boolean = {
+    bot.view.offsetToNearest(t) match {
       case Some(delta: XY) =>
-        // another master is visible at the given relative position (i.e. position delta)
-
-        // close enough to blow it up?
+        // another creature is visible at the given relative position (i.e. position delta)
         if(delta.length <= 2) {
           // yes -- blow it up!
           bot.explode(4)
-
+          return true
         } else {
-          // no -- move closer!
-          bot.move(delta.signum)
-          bot.set("rx" -> delta.x, "ry" -> delta.y)
+          return false
+//          // no -- move closer!
+//          bot.move(delta.signum)
+//          bot.set("rx" -> delta.x, "ry" -> delta.y)
         }
+        return false
       case None =>
-        // no target visible -- follow our targeting strategy
-        val target = bot.inputAsXYOrElse("target", XY.Zero)
-
-        // did we arrive at the target?
-        if(target.isNonZero) {
-          // no -- keep going
-          val unitDelta = target.signum // e.g. CellPos(-8,6) => CellPos(-1,1)
-          bot.move(unitDelta)
-
-          // compute the remaining delta and encode it into a new 'target' property
-          val remainder = target - unitDelta // e.g. = CellPos(-7,5)
-          bot.set("target" -> remainder)
-        } else {
-          // yes -- but we did not detonate yet, and are not pursuing anything?!? => switch purpose
-          bot.set("mood" -> "Lurking", "target" -> "")
-          bot.say("Lurking")
-        }
+        return false
     }
+    false
   }
-
-
-  def reactAsDefensiveMissile(bot: MiniBot) {
-    bot.view.offsetToNearest('s') match {
-      case Some(delta: XY) =>
-        // another slave is visible at the given relative position (i.e. position delta)
-        // move closer!
-        bot.move(delta.signum)
-        bot.set("rx" -> delta.x, "ry" -> delta.y)
-
-      case None =>
-        // no target visible -- follow our targeting strategy
-        val target = bot.inputAsXYOrElse("target", XY.Zero)
-
-        // did we arrive at the target?
-        if(target.isNonZero) {
-          // no -- keep going
-          val unitDelta = target.signum // e.g. CellPos(-8,6) => CellPos(-1,1)
-          bot.move(unitDelta)
-
-          // compute the remaining delta and encode it into a new 'target' property
-          val remainder = target - unitDelta // e.g. = CellPos(-7,5)
-          bot.set("target" -> remainder)
-        } else {
-          // yes -- but we did not annihilate yet, and are not pursuing anything?!? => switch purpose
-          bot.set("mood" -> "Lurking", "target" -> "")
-          bot.say("Lurking")
-        }
-    }
-  }
-
 
   /** Analyze the view, building a map of attractiveness for the 45-degree directions and
     * recording other relevant data, such as the nearest elements of various kinds.

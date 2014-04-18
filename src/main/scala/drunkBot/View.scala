@@ -25,4 +25,25 @@ case class View(cells: String) {
       Some(nearest)
     }
   }
+
+  def emptyDirection: Option[XY] = {
+    for(dx <- -1 to 1) {
+      for(dy <- -1 to 1) {
+        if(math.abs(dx) + math.abs(dy) > 1 && cells.charAt(indexFromRelPos(XY(dx, dy))) == '_') {
+          return Some(XY(dx, dy))
+        }
+      }
+    }
+    None
+  }
+
+  def getFreq = cells.groupBy(_.toChar).map(p => (p._1, p._2.length))
+
+  def spawnBot: Boolean = {
+    val freq = getFreq
+    if(freq.getOrElse('S', 0) > size*size / 2) return false
+    if(freq.getOrElse('P', 0) + freq.getOrElse('B', 0) >= 2) return true
+    if(freq.getOrElse('m', 0) + freq.getOrElse('s', 0) >= 2) return true
+    false
+  }
 }
