@@ -26,15 +26,26 @@ case class View(cells: String) {
     }
   }
 
-  def emptyDirection: Option[XY] = {
+  def isRelCellAv(p: XY): Boolean = {
+    val c = cells.charAt(indexFromRelPos(p))
+    if(c == '_' || c == 'B' || c == 'P' || c == 'M') true else false
+  }
+
+  def allEmptyDirections: List[XY] = {
+    var res = List[XY]()
     for(dx <- -1 to 1) {
       for(dy <- -1 to 1) {
-        if(math.abs(dx) + math.abs(dy) > 1 && cells.charAt(indexFromRelPos(XY(dx, dy))) == '_') {
-          return Some(XY(dx, dy))
+        if(math.abs(dx) + math.abs(dy) > 1 && isRelCellAv(XY(dx, dy))) {
+          res ::= XY(dx, dy)
         }
       }
     }
-    None
+    res
+  }
+
+  def emptyDirection: Option[XY] = {
+    val r = allEmptyDirections
+    if(r.size == 0) None else Some(r(0))
   }
 
   def getFreq = cells.groupBy(_.toChar).map(p => (p._1, p._2.length))

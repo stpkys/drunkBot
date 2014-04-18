@@ -1,6 +1,6 @@
 package drunkBot
 
-import java.util.Random
+import scala.util.Random
 
 /** This bot builds a 'direction value map' that assigns an attractiveness score to
   * each of the eight available 45-degree directions. Additional behaviors:
@@ -60,10 +60,24 @@ object ControlFunction
       val offsets = List(bot.view.offsetToNearest('P'), bot.view.offsetToNearest('B'))
       val part = offsets.filter(!_.isEmpty).map(_.get)
       val offsetToMaster = bot.offsetToMaster
-      val offset = if(part.size == 0) offsetToMaster else part(0)
+      var offset = if(part.size == 0) offsetToMaster else part(0)
+
+      if(!bot.view.isRelCellAv(offset.signum)){
+        val directions = bot.view.allEmptyDirections
+        val t = Random.shuffle(directions).find(p => p.x != bot.inputAsIntOrElse("rx", 0) && p.y != bot.inputAsIntOrElse("ry", 0))
+        if(rnd.nextInt(10) >= 9)
+          bot.say(if(rnd.nextInt(10) % 2 == 0) "I'm drunk" else "Shitfaced")
+        t match {
+          case Some(p) =>
+            offset = p
+          case None =>
+            offset = XY(0,0)
+        }
+      }
 
       bot.move(offset.signum)
       bot.set("rx" -> offset.x, "ry" -> offset.y)
+
 
       if(bot.view.spawnBot && bot.energy > 400 && math.abs(bot.time - bot.lastBotTime) > 4) {
         val emptyCell = bot.view.emptyDirection
@@ -83,6 +97,7 @@ object ControlFunction
         // another creature is visible at the given relative position (i.e. position delta)
         if(delta.length <= 2) {
           // yes -- blow it up!
+          bot.say("GERONIMO")
           bot.explode(4)
           return true
         } else {
